@@ -33,7 +33,9 @@ class ImageTab(QWidget):
 
             # 创建图形布局窗口
             layout_widget = pg.GraphicsLayoutWidget(show=True)
-            plot_item = layout_widget.addPlot(row=0, col=0)
+            plot_item = layout_widget.addPlot(row=0, col=0)            
+            # 为图块设置名字
+            plot_item.setTitle(name)
             img_item = pg.ImageItem(np.random.rand(size[0],size[1]))
             plot_item.addItem(img_item)
             self.plots.append(img_item)

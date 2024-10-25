@@ -7,13 +7,14 @@ from unitree_sdk2py.utils.thread import Thread
 
 from scipy.interpolate import griddata
 from pymodbus.client import ModbusTcpClient
+from pymodbus.client import ModbusSerialClient
 
 import numpy as np
 import struct
 import sys
  
 class ModbusDataHandler:
-    def __init__(self, data=data_sheet, history_length=100, network=None, ip=None, port=6000,device_id=1,LR='r'):
+    def __init__(self, data=data_sheet, history_length=100, network=None, ip=None, port=6000, device_id=1, LR='r', use_serial=False, serial_port='/dev/ttyUSB0', baudrate=115200):
         """_summary_
         Calling self.read() in a loop reads and returns the data, and publishes the DDS message at the same time        
         Args:
@@ -24,6 +25,9 @@ class ModbusDataHandler:
             port (int, optional): ModbusTcp IP port. Defaults to 6000.
             device_id (int, optional): Hand ID. Defaults to 1.
             LR (str, optional): Topic suffix l or r. Defaults to 'r'.
+            use_serial (bool, optional): Whether to use serial mode. Defaults to False.
+            serial_port (str, optional): Serial port name. Defaults to '/dev/ttyUSB0'.
+            baudrate (int, optional): Serial baud rate. Defaults to 115200.
 
         Raises:
             ConnectionError: return
@@ -39,10 +43,15 @@ class ModbusDataHandler:
             'STATUS': [np.zeros(history_length) for _ in range(6)],
             'TEMP': [np.zeros(history_length) for _ in range(6)]
         }
-        if ip==None:
-            self.client = ModbusTcpClient(defaut_ip, port=6000)
+        self.use_serial = use_serial
+        if self.use_serial:
+            self.client = ModbusSerialClient(method='rtu', port=serial_port, baudrate=baudrate, timeout=1)
         else:
-            self.client = ModbusTcpClient(ip, port=port)
+            if ip==None:
+                self.client = ModbusTcpClient(defaut_ip, port=6000)
+            else:
+                self.client = ModbusTcpClient(ip, port=port)
+                
         # 尝试连接 Modbus 服务器
         try:
             if not self.client.connect():
@@ -64,9 +73,9 @@ class ModbusDataHandler:
             return
         
         self.client.write_register(1004,1,self.device_id) #reser error
-        
-        self.pub = ChannelPublisher("rt/inspire_hand/touch/"+LR, inspire_hand_touch)
-        self.pub.Init()
+        if not self.use_serial:
+            self.pub = ChannelPublisher("rt/inspire_hand/touch/"+LR, inspire_hand_touch)
+            self.pub.Init()
 
         self.state_pub = ChannelPublisher("rt/inspire_hand/state/"+LR, inspire_hand_state)
         self.state_pub.Init()
@@ -77,18 +86,18 @@ class ModbusDataHandler:
     def write_registers_callback(self,msg:inspire_hand_ctrl):
         with modbus_lock:
             if msg.mode & 0b0001:  # 模式 1 - 角度
-                self.client.write_registers(1486, msg.angle_set, device_id=1)
+                self.client.write_registers(1486, msg.angle_set, self.device_id)
                 # print('angle_set')
             if msg.mode & 0b0010:  # 模式 2 - 位置
-                self.client.write_registers(1474, msg.pos_set, device_id=1)
+                self.client.write_registers(1474, msg.pos_set, self.device_id)
                 # print('pos_set')
 
             if msg.mode & 0b0100:  # 模式 4 - 力控
-                self.client.write_registers(1498, msg.force_set, device_id=1)
+                self.client.write_registers(1498, msg.force_set, self.device_id)
                 # print('force_set')
 
             if msg.mode & 0b1000:  # 模式 8 - 速度
-                self.client.write_registers(1522, msg.speed_set, device_id=1)
+                self.client.write_registers(1522, msg.speed_set, self.device_id)
                 
     def interpolate_data(self, matrix, size):
         y = np.arange(size[1])
@@ -101,19 +110,21 @@ class ModbusDataHandler:
         return griddata(points, values, (xi, yi), method='linear')
 
     def read(self):
-        touch_msg = get_inspire_hand_touch()
-        matrixs = {}
-        for i, (name, addr, length, size, var) in enumerate(self.data):
-            value = self.read_and_parse_registers(addr, length // 2,'short')
-            if value is not None:
-                setattr(touch_msg, var, value)
-                matrix = np.array(value).reshape(size)
-                
-                Z_interp=self.interpolate_data(matrix,size)
-                matrixs[var]=Z_interp
-                # matrixs.append(matrix)
-        self.pub.Write(touch_msg)
-        
+        if not self.use_serial:
+            touch_msg = get_inspire_hand_touch()
+            matrixs = {}
+            for i, (name, addr, length, size, var) in enumerate(self.data):
+                value = self.read_and_parse_registers(addr, length // 2,'short')
+                if value is not None:
+                    setattr(touch_msg, var, value)
+                    matrix = np.array(value).reshape(size)
+                    
+                    Z_interp=self.interpolate_data(matrix,size)
+                    matrixs[var]=Z_interp
+                    # matrixs.append(matrix)
+            self.pub.Write(touch_msg)
+        else:
+            matrixs = {}
         # Read the states for POS_ACT, ANGLE_ACT, etc.
         states_msg = get_inspire_hand_state()
         states_msg.pos_act = self.read_and_parse_registers(1534, 6)
@@ -140,7 +151,7 @@ class ModbusDataHandler:
     def read_and_parse_registers(self, start_address, num_registers, data_type='short'):
          with modbus_lock:
             # 读取寄存器
-            response = self.client.read_holding_registers(start_address, num_registers, unit=self.device_id)
+            response = self.client.read_holding_registers(start_address, num_registers, self.device_id)
 
             if not response.isError():
                 if data_type == 'short':

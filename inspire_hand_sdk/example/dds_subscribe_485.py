@@ -75,9 +75,9 @@ import sys
 from inspire_sdkpy import qt_tabs,inspire_sdk,inspire_hand_defaut
 # import inspire_sdkpy
 if __name__ == "__main__":
-    ddsHandler = DDSHandler()
+    ddsHandler = DDSHandler(sub_touch=False)
     app = qt_tabs.QApplication(sys.argv)
-    window = qt_tabs.MainWindow(data_handler=ddsHandler,dt=55,name="DDS Subscribe") # Update every 50 ms
+    window = qt_tabs.MainWindow(data_handler=ddsHandler,dt=80,name="DDS Subscribe",Plot_touch=False) # Update every 50 ms
     window.reflash()
     window.show()
     sys.exit(app.exec_())

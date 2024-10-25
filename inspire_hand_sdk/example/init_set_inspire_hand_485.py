@@ -1,4 +1,4 @@
-from pymodbus.client import ModbusTcpClient
+from pymodbus.client import ModbusSerialClient
 import sys
 from PyQt5.QtWidgets import QApplication, QMainWindow, QPushButton, QVBoxLayout, QWidget, QLineEdit, QLabel
 from pymodbus.exceptions import ConnectionException
@@ -31,12 +31,13 @@ baud_rates_reverse = {value: key for key, value in baud_rates.items()}
 
 
 class ModbusHandler:
-    def __init__(self, ip, port, id=1):
-        self.client = ModbusTcpClient(ip, port)
+    def __init__(self, port, baudrate=115200, id=1):
+        # 初始化 ModbusSerialClient，指定串口和波特率
+        self.client = ModbusSerialClient(method="rtu", port=port, baudrate=baudrate, timeout=1)
         try:
             if not self.client.connect():
-                raise ConnectionException(f"无法连接到设备: {ip}:{port}")
-            print(f"成功连接到设备: {ip}:{port}, ID: {id}")
+                raise ConnectionException(f"无法连接到设备: {port}，波特率: {baudrate}")
+            print(f"成功连接到设备: 串口: {port}, 波特率: {baudrate}, ID: {id}")
         except Exception as e:
             print(f"连接错误: {e}")
             self.client = None  # 设置为 None，便于后续检查是否连接成功
@@ -68,25 +69,28 @@ class ModbusHandler:
             print("连接已关闭")
 
 class MainWindow(QMainWindow):
-    def __init__(self,ip=defaut_ip,port=6000):
+    def __init__(self, port, baudrate=9600):
         super().__init__()
-        self.id=self.find_online_devices(ip,port)
-        self.modbus = ModbusHandler(ip, port,self.id)  # 替换为实际的 IP 和端口
-        self.initUI()
-        self.read_registers()
+        self.device_id, self.baudrate = self.find_online_devices(port)
+        if self.device_id is not None:
+            self.modbus = ModbusHandler(port, self.baudrate, self.device_id)
+            self.initUI()
+            self.read_registers()
+        else:
+            print("未找到任何在线设备")
         
-    def find_online_devices(self,ip=defaut_ip,port=6000):
-        for i in range(100):  # 假设设备 ID 范围为 0 到 99
-            self.modbus = ModbusHandler(ip, port,i)  # 替换为实际的 IP 和端口
-            res = self.modbus.read_register(1000, 1)  # 尝试读取寄存器 1000
-            device_id = 0
-            if res is not None:
-                device_id = res[0]
-                print(f'找到在线设备: ID = {device_id}')
-            else:
-                print(f'未找到在线设备: ID = {i}')
-            self.modbus.close()  # 关闭连接
-            return device_id
+    def find_online_devices(self, port):
+        for baudrate, rate_value in baud_rates.items():
+            for device_id in range(100):  # 假设设备 ID 范围为 0 到 99
+                modbus = ModbusHandler(port, rate_value, device_id)
+                res = modbus.read_register(1000, 1)  # 尝试读取寄存器 1000
+                if res is not None:
+                    print(f"找到在线设备: ID = {device_id}，波特率 = {rate_value}")
+                    modbus.close()
+                    return device_id, rate_value
+                modbus.close()
+        print("未找到在线设备")
+        return None, None
             
     def initUI(self):
         self.setWindowTitle('灵巧手设置')
@@ -222,5 +226,5 @@ class MainWindow(QMainWindow):
 
 if __name__ == '__main__':
     app = QApplication(sys.argv)
-    window = MainWindow(ip='192.168.123.210')
+    window = MainWindow(port='/dev/ttyUSB0', baudrate=115200)  # 替换为实际的串口名称
     sys.exit(app.exec_())

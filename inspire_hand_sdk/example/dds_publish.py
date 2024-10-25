@@ -21,6 +21,19 @@ if __name__ == '__main__':
     cmd = inspire_hand_defaut.get_inspire_hand_ctrl()
     short_value=1000
 
+
+    cmd.angle_set=[0,0,0,0,1000,1000]
+    cmd.mode=0b0001
+    pub.Write(cmd)
+    
+    time.sleep(1.0)
+
+    cmd.angle_set=[0,0,0,0,0,1000]
+    cmd.mode=0b0001
+    pub.Write(cmd)
+    
+    time.sleep(3.0)
+
     for cnd in range(100000): 
 
             # 寄存器起始地址，0x05CE 对应的是 1486
@@ -39,7 +52,7 @@ if __name__ == '__main__':
 
         value_to_write_np=np.array(values_to_write)
         value_to_write_np=np.clip(value_to_write_np,200,800)
-        value_to_write_np[3]=800
+        # value_to_write_np[3]=800
 
         # 将组合模式按二进制方式实现
         # mode 0：0000（无操作）
@@ -68,3 +81,4 @@ if __name__ == '__main__':
             print("Waitting for subscriber.")
 
         time.sleep(0.05)
+        

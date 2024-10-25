@@ -6,7 +6,7 @@ import time
 # import inspire_sdkpy
 if __name__ == "__main__":
     # handler=inspire_sdk.ModbusDataHandler(ip=inspire_hand_defaut.defaut_ip,LR='r',device_id=1)
-    handler=inspire_sdk.ModbusDataHandler(ip='192.168.123.210',LR='r',device_id=1)
+    handler=inspire_sdk.ModbusDataHandler(LR='r',device_id=1,use_serial=True)
     while True:
         data_dict=handler.read()
         time.sleep(0.02)

@@ -4,6 +4,7 @@ from PyQt5.QtWidgets import QApplication, QMainWindow, QTabWidget, QWidget, QGri
 from .inspire_hand_defaut import *
 import colorcet  # 确保安装 colorcet 库
 import numpy as np
+import time
 
 class ImageTab(QWidget):
     def __init__(self,datas=data_sheet):
@@ -33,7 +34,7 @@ class ImageTab(QWidget):
 
             # 创建图形布局窗口
             layout_widget = pg.GraphicsLayoutWidget(show=True)
-            plot_item = layout_widget.addPlot(row=0, col=0)            
+            plot_item = layout_widget.addPlot(row=0, col=0)
             # 为图块设置名字
             plot_item.setTitle(name)
             img_item = pg.ImageItem(np.random.rand(size[0],size[1]))
@@ -145,26 +146,33 @@ class CurveTab(QWidget):
   
   
 class MainWindow(QMainWindow):
-    def __init__(self, data_handler, data=data_sheet,dt=100,name="Qt with PyQtGraph"):
+    def __init__(self, data_handler, data=data_sheet,dt=100,name="Qt with PyQtGraph",Plot_touch=True,run_time=False):
         super().__init__()
         self.setWindowTitle(name)
         self.setGeometry(100, 100, 800, 600)
         self.dt=dt
         self.data_handler = data_handler
-
+        self.Plot_touch_=Plot_touch
+        self.run_time=run_time
         self.tabs = QTabWidget()
         self.image_tab = ImageTab(data)
         self.curve_tab = CurveTab(data)
-
-        self.tabs.addTab(self.image_tab, "Images")
+        if Plot_touch:
+            self.tabs.addTab(self.image_tab, "Images")
         self.tabs.addTab(self.curve_tab, "Curves")
 
         self.setCentralWidget(self.tabs)
         
     def update_plot(self):
+        start_time = time.time()  # 记录开始时间
         data_dict =self.data_handler.read()
+        end_time = time.time()  # 记录结束时间
         self.curve_tab.update_plot(data_dict['states'])
-        self.image_tab.update_plot(data_dict['touch'])
+        if self.Plot_touch_:
+            self.image_tab.update_plot(data_dict['touch'])
+        elapsed_time = end_time - start_time
+        if self.run_time:
+            print(f"update_plot execution time: {elapsed_time:.6f} seconds")
 
     def reflash(self):
         self.timer = QtCore.QTimer()

@@ -14,6 +14,8 @@ setup(name='inspire_sdkpy',
             "opencv-python",
             "PyQt5",
             "pyqtgraph",
-            "colorcet"
+            "colorcet",
+            "pymodbus",
+            "pyserial"
       ],
       )

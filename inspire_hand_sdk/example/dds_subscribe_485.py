@@ -12,7 +12,7 @@ import threading
 
 class DDSHandler():
    
-    def __init__(self,network=None,sub_touch=True):
+    def __init__(self,network=None,sub_touch=True,LR='r'):
         super().__init__()  # 调用父类的 __init__ 方法
         if network ==None:
             ChannelFactoryInitialize(0)
@@ -20,10 +20,10 @@ class DDSHandler():
             ChannelFactoryInitialize(0, network)
         self.data=inspire_hand_defaut.data_sheet
         if sub_touch:
-            self.sub_touch = ChannelSubscriber("rt/inspire_hand/touch/r", inspire_dds.inspire_hand_touch)
+            self.sub_touch = ChannelSubscriber("rt/inspire_hand/touch/"+LR, inspire_dds.inspire_hand_touch)
             self.sub_touch.Init(self.update_data_touch, 10)
         
-        self.sub_states = ChannelSubscriber("rt/inspire_hand/state/r", inspire_dds.inspire_hand_state)
+        self.sub_states = ChannelSubscriber("rt/inspire_hand/state/"+LR, inspire_dds.inspire_hand_state)
         self.sub_states.Init(self.update_data_state, 10)
         self.touch={}
         self.states={}

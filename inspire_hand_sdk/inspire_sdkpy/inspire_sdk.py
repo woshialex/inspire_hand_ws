@@ -14,7 +14,7 @@ import struct
 import sys
  
 class ModbusDataHandler:
-    def __init__(self, data=data_sheet, history_length=100, network=None, ip=None, port=6000, device_id=1, LR='r', use_serial=False, serial_port='/dev/ttyUSB0', baudrate=115200):
+    def __init__(self, data=data_sheet, history_length=100, network=None, ip=None, port=6000, device_id=1, LR='r', use_serial=False, serial_port='/dev/ttyUSB0', baudrate=115200, states_structure=None):
         """_summary_
         Calling self.read() in a loop reads and returns the data, and publishes the DDS message at the same time        
         Args:
@@ -28,7 +28,7 @@ class ModbusDataHandler:
             use_serial (bool, optional): Whether to use serial mode. Defaults to False.
             serial_port (str, optional): Serial port name. Defaults to '/dev/ttyUSB0'.
             baudrate (int, optional): Serial baud rate. Defaults to 115200.
-
+            states_structure (list, optional): List of tuples for state registers. Each tuple should contain (attribute_name, start_address, length, data_type). If None ,will publish All Data   
         Raises:
             ConnectionError: return
         """        
@@ -44,6 +44,16 @@ class ModbusDataHandler:
             'TEMP': [np.zeros(history_length) for _ in range(6)]
         }
         self.use_serial = use_serial
+        
+        self.states_structure = states_structure or [
+            ('pos_act', 1534, 6, 'short'),
+            ('angle_act', 1546, 6, 'short'),
+            ('force_act', 1582, 6, 'short'),
+            ('current', 1594, 6, 'short'),
+            ('err', 1606, 3, 'byte'),
+            ('status', 1612, 3, 'byte'),
+            ('temperature', 1618, 3, 'byte')
+        ]
         if self.use_serial:
             self.client = ModbusSerialClient(method='rtu', port=serial_port, baudrate=baudrate, timeout=1)
         else:
@@ -127,14 +137,10 @@ class ModbusDataHandler:
             matrixs = {}
         # Read the states for POS_ACT, ANGLE_ACT, etc.
         states_msg = get_inspire_hand_state()
-        states_msg.pos_act = self.read_and_parse_registers(1534, 6)
-        states_msg.angle_act = self.read_and_parse_registers(1546, 6)
-        states_msg.force_act = self.read_and_parse_registers(1582, 6)
-        states_msg.current = self.read_and_parse_registers(1594, 6)
-        states_msg.err = self.read_and_parse_registers(1606, 3, data_type='byte')
-        states_msg.status = self.read_and_parse_registers(1612, 3, data_type='byte')
-        states_msg.temperature = self.read_and_parse_registers(1618, 3, data_type='byte')
 
+        for attr_name, start_address, length, data_type in self.states_structure:
+            setattr(states_msg, attr_name, self.read_and_parse_registers(start_address, length, data_type))
+            
         self.state_pub.Write(states_msg)
 
         return {'states':{

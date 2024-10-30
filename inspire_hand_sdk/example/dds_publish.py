@@ -15,23 +15,27 @@ if __name__ == '__main__':
     else:
         ChannelFactoryInitialize(0)
     # Create a publisher to publish the data defined in UserData class
-    pub = ChannelPublisher("rt/inspire_hand/ctrl/r", inspire_dds.inspire_hand_ctrl)
-    pub.Init()
+    pubr = ChannelPublisher("rt/inspire_hand/ctrl/r", inspire_dds.inspire_hand_ctrl)
+    pubr.Init()
     
+    publ = ChannelPublisher("rt/inspire_hand/ctrl/l", inspire_dds.inspire_hand_ctrl)
+    publ.Init()
     cmd = inspire_hand_defaut.get_inspire_hand_ctrl()
     short_value=1000
 
 
     cmd.angle_set=[0,0,0,0,1000,1000]
     cmd.mode=0b0001
-    pub.Write(cmd)
-    
+    publ.Write(cmd)
+    pubr.Write(cmd)
+
     time.sleep(1.0)
 
     cmd.angle_set=[0,0,0,0,0,1000]
     cmd.mode=0b0001
-    pub.Write(cmd)
-    
+    publ.Write(cmd)
+    pubr.Write(cmd)
+
     time.sleep(3.0)
 
     for cnd in range(100000): 
@@ -41,7 +45,7 @@ if __name__ == '__main__':
         num_registers = 6  # 6 个寄存器
         # 生成要写入的值列表，每个寄存器为一个 short 值
 
-        if (cnd+1) % 30 == 0:
+        if (cnd+1) % 10 == 0:
             short_value = 1000-short_value  # 要写入的 short 值
 
 
@@ -74,11 +78,11 @@ if __name__ == '__main__':
         cmd.angle_set=value_to_write_np.tolist()
         cmd.mode=0b0001
         #Publish message
-        if pub.Write(cmd):
+        if  publ.Write(cmd) and pubr.Write(cmd):
             # print("Publish success. msg:", cmd.crc)
             pass
         else:
             print("Waitting for subscriber.")
 
-        time.sleep(0.05)
+        time.sleep(0.1)
         

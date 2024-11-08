@@ -226,5 +226,5 @@ class MainWindow(QMainWindow):
 
 if __name__ == '__main__':
     app = QApplication(sys.argv)
-    window = MainWindow(port='/dev/ttyUSB0', baudrate=115200)  # 替换为实际的串口名称
+    window = MainWindow(port='/dev/ttyUSB1', baudrate=115200)  # 替换为实际的串口名称
     sys.exit(app.exec_())

@@ -8,15 +8,18 @@
 建议使用 `venv` 进行虚拟环境管理：
 
 ```bash
-python -m venv venv
-source venv/bin/activate  # Linux/MacOS
-# 或
-venv\Scripts\activate  # Windows
+python -m venv venv # 或 解压venv_x86.tar.xz,将其中的.venv放置在inspire_hand_ws/.venv
+
+# 之后执行脚本对venv进行修改：
+python update_venv_path.py .venv
+python update_bin_files.py .venv 
+
+source venv/bin/activate  # Linux/MacOS 激活虚拟环境
 ```
 
 ## 安装依赖
 
-1. 安装项目依赖：
+1. 当自行配置环境时，需要安装项目依赖；如果你使用 Unzip venv_x86.tar.xz 去设置环境，则不需要运行以下命令：
 
     ```bash
     pip install -r requirements.txt

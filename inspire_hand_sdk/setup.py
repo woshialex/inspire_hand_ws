@@ -11,7 +11,6 @@ setup(name='inspire_sdkpy',
       install_requires=[
             "cyclonedds==0.10.2",
             "numpy",
-            "opencv-python",
             "PyQt5",
             "pyqtgraph",
             "colorcet",

@@ -3,7 +3,6 @@ from unitree_sdk2py.core.channel import ChannelSubscriber, ChannelFactoryInitial
 from inspire_sdkpy import inspire_hand_defaut,inspire_dds
 
 import numpy as np
-from scipy.interpolate import griddata
 import colorcet  
 import time
 
@@ -29,15 +28,6 @@ class DDSHandler():
         self.states={}
         self.data_touch_lock = threading.Lock()
         self.data_state_lock = threading.Lock()
-    def interpolate_data(self,matrix, size):
-        y = np.arange(size[1])
-        x = np.arange(size[0])
-        xi = np.linspace(0, size[1] - 1, size[1]*2)
-        yi = np.linspace(0, size[0] - 1, size[0]*2)
-        yi, xi = np.meshgrid(xi, yi)
-        points = np.array(np.meshgrid(x, y)).T.reshape(-1, 2)
-        values = matrix.flatten()
-        return griddata(points, values, (xi, yi), method='linear')
 
     # 更新图形的函数
     def update_data_touch(self,msg:inspire_dds.inspire_hand_touch):
@@ -47,8 +37,7 @@ class DDSHandler():
                 value=getattr(msg,var)
                 if value is not None:
                     matrix = np.array(value).reshape(size)
-                    Z_interp=self.interpolate_data(matrix,size)
-                    self.touch[var]=Z_interp
+                    self.touch[var]=matrix
             end_time = time.time()  # 记录结束时间
             elapsed_time = end_time - start_time  # 计算耗时
             # print(f"Data update time: {elapsed_time:.6f} seconds")  # 打印耗时
@@ -75,7 +64,9 @@ import sys
 from inspire_sdkpy import qt_tabs,inspire_sdk,inspire_hand_defaut
 # import inspire_sdkpy
 if __name__ == "__main__":
-    ddsHandler = DDSHandler()
+    ddsHandler = DDSHandler(LR='r')
+    # ddsHandler = DDSHandler(LR='l')
+
     app = qt_tabs.QApplication(sys.argv)
     window = qt_tabs.MainWindow(data_handler=ddsHandler,dt=55,name="DDS Subscribe") # Update every 50 ms
     window.reflash()

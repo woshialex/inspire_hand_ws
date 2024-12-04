@@ -5,16 +5,16 @@ from unitree_sdk2py.core.channel import ChannelPublisher, ChannelFactoryInitiali
 from unitree_sdk2py.core.channel import ChannelSubscriber, ChannelFactoryInitialize
 from unitree_sdk2py.utils.thread import Thread
 
-from scipy.interpolate import griddata
 from pymodbus.client import ModbusTcpClient
 from pymodbus.client import ModbusSerialClient
 
 import numpy as np
 import struct
 import sys
+import time
  
 class ModbusDataHandlerDouble:
-    def __init__(self, data=data_sheet, history_length=100, network=None, ip=None, port=6000, device_id=[1,2], use_serial=False, serial_port='/dev/ttyUSB0', baudrate=115200, states_structure=None):
+    def __init__(self, data=data_sheet, history_length=100, network=None, ip=None, port=6000, device_id=[1,2], use_serial=False, serial_port='/dev/ttyUSB0', baudrate=115200, states_structure=None, initDDS=True, max_retries=5, retry_delay=2):
         """_summary_
         Calling self.read() in a loop reads and returns the data, and publishes the DDS message at the same time        
         Args:
@@ -29,10 +29,11 @@ class ModbusDataHandlerDouble:
             serial_port (str, optional): Serial port name. Defaults to '/dev/ttyUSB0'.
             baudrate (int, optional): Serial baud rate. Defaults to 115200.
             states_structure (list, optional): List of tuples for state registers. Each tuple should contain (attribute_name, start_address, length, data_type). If None ,will publish All Data
-            initDDS (bool, optional): Run ChannelFactoryInitialize(0)
-   
+            initDDS (bool, optional): Run ChannelFactoryInitialize(0),only need run once in all program
+            max_retries (int, optional): Number of retries for connecting to Modbus server. Defaults to 3.
+            retry_delay (int, optional): Delay between retries in seconds. Defaults to 2.
         Raises:
-            ConnectionError: return
+            ConnectionError: raise when connection fails after max_retries
         """        
         self.data = data
         self.history_length = history_length
@@ -64,21 +65,17 @@ class ModbusDataHandlerDouble:
             else:
                 self.client = ModbusTcpClient(ip, port=port)
                 
-        # 尝试连接 Modbus 服务器
-        try:
-            if not self.client.connect():
-                raise ConnectionError("Failed to connect to Modbus server.")
-        except ConnectionError as e:
-            print(f"Error: {e}")
-            # 这里可以添加日志记录或其他恢复机制
-            return            
+        # 尝试连接 Modbus 服务器，带重试机制
+        self.connect_to_modbus(max_retries, retry_delay)     
         self.device_id = device_id
        # 初始化 ChannelFactory
         try:
-            if network is None:
-                ChannelFactoryInitialize(0, network)
-            else:
-                ChannelFactoryInitialize(0)
+            if initDDS:
+                if network is None:
+                    ChannelFactoryInitialize(0, network)
+                else:
+                    ChannelFactoryInitialize(0)
+                
         except Exception as e:
             print(f"Error during ChannelFactory initialization: {e}")
             # 这里可以添加日志记录或其他恢复机制
@@ -105,7 +102,25 @@ class ModbusDataHandlerDouble:
         
         self.sub = ChannelSubscriber("rt/inspire_hand/ctrl/r", inspire_hand_ctrl)
         self.sub.Init(self.write_registers_callback, 10)           
-        
+                   
+    def connect_to_modbus(self, max_retries, retry_delay):
+        """连接到 Modbus 服务器，并在失败时重试"""
+        retries = 0
+        while retries < max_retries:
+            try:
+                if not self.client.connect():
+                    raise ConnectionError("Failed to connect to Modbus server.")
+                print("Modbus client connected successfully.")
+                return
+            except ConnectionError as e:
+                print(f"Connection attempt {retries + 1} failed: {e}")
+                retries += 1
+                if retries < max_retries:
+                    print(f"Retrying in {retry_delay} seconds...")
+                    time.sleep(retry_delay)
+                else:
+                    print("Max retries reached. Could not connect.")
+                    raise   
     def write_registers_callback(self,msg:inspire_hand_ctrl):
         with modbus_lock:
             if msg.mode & 0b0001:  # 模式 1 - 角度
@@ -129,17 +144,6 @@ class ModbusDataHandlerDouble:
                 self.client.write_registers(1522, msg.speed_set, self.device_id[0])
                 self.client.write_registers(1522, msg.speed_set, self.device_id[1])
 
-    
-    def interpolate_data(self, matrix, size):
-        y = np.arange(size[1])
-        x = np.arange(size[0])
-        xi = np.linspace(0, size[1] - 1, size[1] * 2)
-        yi = np.linspace(0, size[0] - 1, size[0] * 2)
-        yi, xi = np.meshgrid(xi, yi)
-        points = np.array(np.meshgrid(x, y)).T.reshape(-1, 2)
-        values = matrix.flatten()
-        return griddata(points, values, (xi, yi), method='linear')
-
     def read(self):
         if not self.use_serial:
             touch_msg = get_inspire_hand_touch()
@@ -159,11 +163,8 @@ class ModbusDataHandlerDouble:
                     matrix = np.array(value).reshape(size)
                     matrixs2 = np.array(value2).reshape(size)
 
-                    Z_interp=self.interpolate_data(matrix,size)
-                    Z_interp2=self.interpolate_data(matrixs2,size)
-
-                    matrixs[var]=Z_interp
-                    matrixs2[var]=Z_interp2
+                    matrixs[var]=matrix
+                    matrixs2[var]=matrixs2
 
                     # matrixs.append(matrix)
             self.pub.Write(touch_msg)

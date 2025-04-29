@@ -17,7 +17,7 @@ class DDSHandler():
             ChannelFactoryInitialize(0)
         else:
             ChannelFactoryInitialize(0, network)
-        self.data=inspire_hand_defaut.data_sheet
+        self.data=inspire_hand_defaut.touch_data_sheet
         if sub_touch:
             self.sub_touch = ChannelSubscriber("rt/inspire_hand/touch/"+LR, inspire_dds.inspire_hand_touch)
             self.sub_touch.Init(self.update_data_touch, 10)

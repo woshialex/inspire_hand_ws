@@ -1,8 +1,7 @@
 import time
 import sys
 
-from unitree_sdk2py.core.channel import ChannelPublisher, ChannelFactoryInitialize
-from unitree_sdk2py.core.channel import ChannelSubscriber, ChannelFactoryInitialize
+from unitree_sdk2py.core.channel import ChannelPublisher, ChannelSubscriber, ChannelFactoryInitialize
 from unitree_sdk2py.utils.thread import Thread
 
 from inspire_sdkpy import inspire_hand_defaut,inspire_dds
@@ -22,7 +21,6 @@ if __name__ == '__main__':
     publ.Init()
     cmd = inspire_hand_defaut.get_inspire_hand_ctrl()
     short_value=1000
-
 
     cmd.angle_set=[0,0,0,0,1000,1000]
     cmd.mode=0b0001
@@ -47,8 +45,6 @@ if __name__ == '__main__':
 
         if (cnd+1) % 10 == 0:
             short_value = 1000-short_value  # 要写入的 short 值
-
-
 
         values_to_write = [short_value] * num_registers
         values_to_write[-1]=1000-values_to_write[-1]

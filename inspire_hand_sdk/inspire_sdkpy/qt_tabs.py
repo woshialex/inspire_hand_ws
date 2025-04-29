@@ -7,7 +7,7 @@ import numpy as np
 import time
 
 class ImageTab(QWidget):
-    def __init__(self,datas=data_sheet):
+    def __init__(self,datas):
         super().__init__()
         self.layout = QVBoxLayout()
         self.setLayout(self.layout)  
@@ -20,11 +20,10 @@ class ImageTab(QWidget):
 
     def create_images(self):
         num_cols = 3  # 每行的列数
-        num_rows = (len(data_sheet) + num_cols - 1) // num_cols  # 计算行数
+        num_rows = (len(self.data_sheet) + num_cols - 1) // num_cols  # 计算行数
         self.plots = []
         self.color_map = pg.ColorMap(pos=np.linspace(0, 1, 256), color=colorcet.fire[:256])
-        for i, (name, addr, length, size, var) in enumerate(self.data_sheet):
-                
+        for i, (name, addr, size, var) in enumerate(self.data_sheet):
             row = i // num_cols  # 计算当前行
             col = i % num_cols  # 计算当前列            # 创建随机大小的图像数据
 
@@ -49,22 +48,21 @@ class ImageTab(QWidget):
             self.grid_layout.addWidget(layout_widget, row, col)
 
     def update_plot(self,data_dict):
-        for i, (name, addr, length, size,var) in enumerate(self.data_sheet):
+        for i, (name, addr, size,var) in enumerate(self.data_sheet):
             if var in data_dict:
                 img = data_dict[var]
-                self.plots[i].setImage(img, autoLevels=True)  # 更新图像数据
+                self.plots[i].setImage(img, levels=(0, 4096), autoLevels=False)
             else:
                 print("missing ", var)
 
 class CurveTab(QWidget):
-    def __init__(self,datas=data_sheet,history_len=100):
+    def __init__(self, history_len=100):
         super().__init__()
         self.layout = QVBoxLayout()
         self.setLayout(self.layout)  
         
         self.grid_layout=QGridLayout()   
         self.layout.addLayout(self.grid_layout)   
-        self.data_sheet=datas
         self.history_length = history_len
         self.history = {
         'POS_ACT': [np.zeros(history_len) for _ in range(6)],   # 6 个数据点
@@ -141,7 +139,7 @@ class CurveTab(QWidget):
   
   
 class MainWindow(QMainWindow):
-    def __init__(self, data_handler, data=data_sheet,dt=100,name="Qt with PyQtGraph",Plot_touch=True,run_time=False):
+    def __init__(self, data_handler, dt=100, name="Qt with PyQtGraph", Plot_touch=True, run_time=False):
         super().__init__()
         self.setWindowTitle(name)
         self.setGeometry(100, 100, 800, 600)
@@ -150,8 +148,8 @@ class MainWindow(QMainWindow):
         self.Plot_touch_=Plot_touch
         self.run_time=run_time
         self.tabs = QTabWidget()
-        self.image_tab = ImageTab(data)
-        self.curve_tab = CurveTab(data)
+        self.image_tab = ImageTab(data_handler.touch_data)
+        self.curve_tab = CurveTab()
         if Plot_touch:
             self.tabs.addTab(self.image_tab, "Images")
         self.tabs.addTab(self.curve_tab, "Curves")
@@ -161,13 +159,12 @@ class MainWindow(QMainWindow):
     def update_plot(self):
         start_time = time.time()  # 记录开始时间
         data_dict =self.data_handler.read()
-        end_time = time.time()  # 记录结束时间
+        if self.run_time:
+            print(f"data read time: {time.time() - start_time:.4f} seconds")
+
         self.curve_tab.update_plot(data_dict['states'])
         if self.Plot_touch_:
             self.image_tab.update_plot(data_dict['touch'])
-        elapsed_time = end_time - start_time
-        if self.run_time:
-            print(f"update_plot execution time: {elapsed_time:.6f} seconds")
 
     def reflash(self):
         self.timer = QtCore.QTimer()

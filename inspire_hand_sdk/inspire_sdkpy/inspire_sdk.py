@@ -13,7 +13,7 @@ import struct
 import sys
 import time
 class ModbusDataHandler:
-    def __init__(self, data=data_sheet, history_length=100, network=None, ip=None, port=6000, device_id=1, LR='r', use_serial=False, serial_port='/dev/ttyUSB0', baudrate=115200, states_structure=None, initDDS=True, max_retries=5, retry_delay=2):
+    def __init__(self, data=data_sheet, history_length=100, network=None, ip=None, port=6000, device_id=1, LR='r', use_serial=False, serial_port='/dev/ttyUSB0', baudrate=115200, selected_states=None, initDDS=True, max_retries=5, retry_delay=2):
         """_summary_
         Calling self.read() in a loop reads and returns the data, and publishes the DDS message at the same time        
         Args:
@@ -35,27 +35,39 @@ class ModbusDataHandler:
             ConnectionError: raise when connection fails after max_retries
         """        
         self.data = data
-        self.history_length = history_length
-        self.history = {
-            'POS_ACT': [np.zeros(history_length) for _ in range(6)],
-            'ANGLE_ACT': [np.zeros(history_length) for _ in range(6)],
-            'FORCE_ACT': [np.zeros(history_length) for _ in range(6)],
-            'CURRENT': [np.zeros(history_length) for _ in range(6)],
-            'ERROR': [np.zeros(history_length) for _ in range(6)],
-            'STATUS': [np.zeros(history_length) for _ in range(6)],
-            'TEMP': [np.zeros(history_length) for _ in range(6)]
-        }
+        # not used ?
+        # self.history_length = history_length
+        # self.history = {
+        #     'POS_ACT': [np.zeros(history_length) for _ in range(6)],
+        #     'ANGLE_ACT': [np.zeros(history_length) for _ in range(6)],
+        #     'FORCE_ACT': [np.zeros(history_length) for _ in range(6)],
+        #     'CURRENT': [np.zeros(history_length) for _ in range(6)],
+        #     'ERROR': [np.zeros(history_length) for _ in range(6)],
+        #     'STATUS': [np.zeros(history_length) for _ in range(6)],
+        #     'TEMP': [np.zeros(history_length) for _ in range(6)]
+        # }
         self.use_serial = use_serial
-        
-        self.states_structure = states_structure or [
+
+        default_states_structure = [
             ('pos_act', 1534, 6, 'short'),
             ('angle_act', 1546, 6, 'short'),
             ('force_act', 1582, 6, 'short'),
             ('current', 1594, 6, 'short'),
             ('err', 1606, 3, 'byte'),
             ('status', 1612, 3, 'byte'),
-            ('temperature', 1618, 3, 'byte')
-        ]
+            ('temperature', 1618, 3, 'byte'),
+        ] 
+        # add touch
+        for name, addr, length, size, var in data_sheet:
+            default_states_structure.append((var, addr, length//2, 'short'))
+
+        if selected_states is None:
+            self.states_structure = default_states_structure
+        else:
+            self.states_structure = [
+                (name, addr, length, size, var) for name, addr, length, size, var in default_states_structure if var in selected_states
+            ]
+
         if self.use_serial:
             self.client = ModbusSerialClient(method='rtu', port=serial_port, baudrate=baudrate, timeout=1)
             print("will use serial")
@@ -85,9 +97,9 @@ class ModbusDataHandler:
             return
         
         self.client.write_register(1004,1,self.device_id) #reser error
-        if not self.use_serial:
-            self.pub = ChannelPublisher("rt/inspire_hand/touch/"+LR, inspire_hand_touch)
-            self.pub.Init()
+        # if not self.use_serial:
+        self.pub = ChannelPublisher("rt/inspire_hand/touch/"+LR, inspire_hand_touch)
+        self.pub.Init()
 
         self.state_pub = ChannelPublisher("rt/inspire_hand/state/"+LR, inspire_hand_state)
         self.state_pub.Init()
@@ -130,18 +142,19 @@ class ModbusDataHandler:
                 self.client.write_registers(1522, msg.speed_set, self.device_id)
                 
     def read(self):
-        if not self.use_serial:
-            touch_msg = get_inspire_hand_touch()
-            matrixs = {}
-            for i, (name, addr, length, size, var) in enumerate(self.data):
-                value = self.read_and_parse_registers(addr, length // 2,'short')
-                if value is not None:
-                    setattr(touch_msg, var, value)
-                    matrix = np.array(value).reshape(size)
-                    matrixs[var]=matrix
-            self.pub.Write(touch_msg)
-        else:
-            matrixs = {}
+        # if not self.use_serial:
+        touch_msg = get_inspire_hand_touch()
+        matrixs = {}
+        for i, (name, addr, length, size, var) in enumerate(self.data):
+            value = self.read_and_parse_registers(addr, length // 2,'short')
+            if value is not None:
+                setattr(touch_msg, var, value)
+                matrix = np.array(value).reshape(size)
+                matrixs[var]=matrix
+        self.pub.Write(touch_msg)
+        # else:
+        #     matrixs = {}
+
         # Read the states for POS_ACT, ANGLE_ACT, etc.
         states_msg = get_inspire_hand_state()
 

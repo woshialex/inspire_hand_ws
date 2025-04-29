@@ -6,23 +6,23 @@ modbus_lock = threading.Lock()
 
 # 数据定义   
 data_sheet = [
-    ("小拇指指端触觉数据", 3000, 18, (3, 3), "fingerone_tip_touch"),      # 小拇指指端触觉数据
-    ("小拇指指尖触觉数据", 3018, 192, (12, 8), "fingerone_top_touch"),      # 小拇指指尖触觉数据
-    ("小拇指指腹触觉数据", 3210, 160, (10, 8), "fingerone_palm_touch"),     # 小拇指指腹触觉数据
-    ("无名指指端触觉数据", 3370, 18, (3, 3), "fingertwo_tip_touch"),      # 无名指指端触觉数据
-    ("无名指指尖触觉数据", 3388, 192, (12, 8), "fingertwo_top_touch"),      # 无名指指尖触觉数据
-    ("无名指指腹触觉数据", 3580, 160, (10, 8), "fingertwo_palm_touch"),     # 无名指指腹触觉数据
-    ("中指指端触觉数据", 3740, 18, (3, 3), "fingerthree_tip_touch"),    # 中指指端触觉数据
-    ("中指指尖触觉数据", 3758, 192, (12, 8), "fingerthree_top_touch"),    # 中指指尖触觉数据
-    ("中指指腹触觉数据", 3950, 160, (10, 8), "fingerthree_palm_touch"),   # 中指指腹触觉数据
-    ("食指指端触觉数据", 4110, 18, (3, 3), "fingerfour_tip_touch"),     # 食指指端触觉数据
-    ("食指指尖触觉数据", 4128, 192, (12, 8), "fingerfour_top_touch"),     # 食指指尖触觉数据
-    ("食指指腹触觉数据", 4320, 160, (10, 8), "fingerfour_palm_touch"),    # 食指指腹触觉数据
-    ("大拇指指端触觉数据", 4480, 18, (3, 3), "fingerfive_tip_touch"),     # 大拇指指端触觉数据
-    ("大拇指尖触觉数据", 4498, 192, (12, 8), "fingerfive_top_touch"),     # 大拇指尖触觉数据
-    ("大拇指指中触觉数据", 4690, 18, (3, 3), "fingerfive_middle_touch"),  # 大拇指指中触觉数据
-    ("大拇指指腹触觉数据", 4708, 192, (12, 8), "fingerfive_palm_touch"),    # 大拇指指腹触觉数据
-    ("掌心触觉数据", 4900, 224, (14, 8), "palm_touch")                # 掌心触觉数据
+    ("小拇指指端", 3000, 18, (3, 3), "fingerone_tip_touch"),      # 小拇指指端触觉数据
+    ("小拇指指尖", 3018, 192, (12, 8), "fingerone_top_touch"),      # 小拇指指尖触觉数据
+    ("小拇指指腹", 3210, 160, (10, 8), "fingerone_palm_touch"),     # 小拇指指腹触觉数据
+    ("无名指指端", 3370, 18, (3, 3), "fingertwo_tip_touch"),      # 无名指指端触觉数据
+    ("无名指指尖", 3388, 192, (12, 8), "fingertwo_top_touch"),      # 无名指指尖触觉数据
+    ("无名指指腹", 3580, 160, (10, 8), "fingertwo_palm_touch"),     # 无名指指腹触觉数据
+    ("中指指端", 3740, 18, (3, 3), "fingerthree_tip_touch"),    # 中指指端触觉数据
+    ("中指指尖", 3758, 192, (12, 8), "fingerthree_top_touch"),    # 中指指尖触觉数据
+    ("中指指腹", 3950, 160, (10, 8), "fingerthree_palm_touch"),   # 中指指腹触觉数据
+    ("食指指端", 4110, 18, (3, 3), "fingerfour_tip_touch"),     # 食指指端触觉数据
+    ("食指指尖", 4128, 192, (12, 8), "fingerfour_top_touch"),     # 食指指尖触觉数据
+    ("食指指腹", 4320, 160, (10, 8), "fingerfour_palm_touch"),    # 食指指腹触觉数据
+    ("大拇指指端", 4480, 18, (3, 3), "fingerfive_tip_touch"),     # 大拇指指端触觉数据
+    ("大拇指指尖", 4498, 192, (12, 8), "fingerfive_top_touch"),     # 大拇指尖触觉数据
+    ("大拇指指中", 4690, 18, (3, 3), "fingerfive_middle_touch"),  # 大拇指指中触觉数据
+    ("大拇指指腹", 4708, 192, (12, 8), "fingerfive_palm_touch"),    # 大拇指指腹触觉数据
+    ("掌心", 4900, 224, (14, 8), "palm_touch")                # 掌心触觉数据
 ]
 status_codes = {
     0: "正在松开",
@@ -88,22 +88,22 @@ def get_inspire_hand_touch():
     
 def get_inspire_hand_state():
     return inspire_hand_state(
-        pos_act=[0 for _ in range(6)],        # 小拇指指端触觉数据
-        angle_act=[0 for _ in range(6)],       # 小拇指指尖触觉数据
-        force_act=[0 for _ in range(6)],      # 小拇指指腹触觉数据
-        current=[0 for _ in range(6)],        # 无名指指端触觉数据
-        err=[0 for _ in range(6)],        # 无名指指端触觉数据
-        status=[0 for _ in range(6)],        # 无名指指端触觉数据
-        temperature=[0 for _ in range(6)],        # 无名指指端触觉数据
+        pos_act=[0 for _ in range(6)],
+        angle_act=[0 for _ in range(6)],
+        force_act=[0 for _ in range(6)],
+        current=[0 for _ in range(6)],
+        err=[0 for _ in range(6)],
+        status=[0 for _ in range(6)],
+        temperature=[0 for _ in range(6)],
     ) 
 
 def get_inspire_hand_ctrl():
     return inspire_hand_ctrl(
-        pos_set=[0 for _ in range(6)],        # 小拇指指端触觉数据
-        angle_set=[0 for _ in range(6)],       # 小拇指指尖触觉数据
-        force_set=[0 for _ in range(6)],      # 小拇指指腹触觉数据
-        speed_set=[0 for _ in range(6)],        # 无名指指端触觉数据
+        pos_set=[0 for _ in range(6)],
+        angle_set=[0 for _ in range(6)],
+        force_set=[0 for _ in range(6)],
+        speed_set=[0 for _ in range(6)],
         mode=0b0000
     ) 
 
-defaut_ip='192.168.11.210'
+defaut_ip='192.168.123.210'

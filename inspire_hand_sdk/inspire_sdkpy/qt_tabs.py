@@ -1,5 +1,5 @@
 import pyqtgraph as pg
-from PyQt5 import QtCore
+from PyQt5 import QtCore, QtWidgets
 from PyQt5.QtWidgets import QApplication, QMainWindow, QTabWidget, QWidget, QGridLayout,QLabel,QVBoxLayout
 from .inspire_hand_defaut import *
 import colorcet  # 确保安装 colorcet 库
@@ -19,47 +19,42 @@ class ImageTab(QWidget):
         self.create_images()
 
     def create_images(self):
-        num_cols = 4  # 每行的列数
+        num_cols = 3  # 每行的列数
         num_rows = (len(data_sheet) + num_cols - 1) // num_cols  # 计算行数
         self.plots = []
-        self.color_maps = []
-        self.color_bars = []
+        self.color_map = pg.ColorMap(pos=np.linspace(0, 1, 256), color=colorcet.fire[:256])
         for i, (name, addr, length, size, var) in enumerate(self.data_sheet):
                 
             row = i // num_cols  # 计算当前行
             col = i % num_cols  # 计算当前列            # 创建随机大小的图像数据
-            # width = random.randint(50, 100)
-            # height = random.randint(50, 150)
-            # image_data = np.random.rand(height, width)  # 生成二维图像数据
 
             # 创建图形布局窗口
             layout_widget = pg.GraphicsLayoutWidget(show=True)
+            # Set fixed size policy to ensure square shape
+            layout_widget.setSizePolicy(QtWidgets.QSizePolicy.Fixed, QtWidgets.QSizePolicy.Fixed)
+            # Set a minimum size to ensure the widget is square
+            layout_widget.setMinimumSize(200, 200)
             plot_item = layout_widget.addPlot(row=0, col=0)
             # 为图块设置名字
             plot_item.setTitle(name)
-            img_item = pg.ImageItem(np.random.rand(size[0],size[1]))
+            # Lock aspect ratio to ensure square pixels
+            plot_item.getViewBox().setAspectLocked(True)
+            # Create image with zeros
+            img_item = pg.ImageItem(np.zeros((size[0],size[1])))
+            img_item.setColorMap(self.color_map)
             plot_item.addItem(img_item)
+            # Set the correct x and y range to match the image dimensions
+            plot_item.setLimits(xMin=0, xMax=14, yMin=0, yMax=14)
             self.plots.append(img_item)
-
-            # 创建颜色映射
-            color_map = pg.ColorMap(pos=np.linspace(0, 1, 256), color=colorcet.fire[:256])
-            self.color_maps.append(color_map)
-
-            # 创建颜色条
-            color_bar = pg.ColorBarItem(colorMap=color_map, values=(0, 1), width=5, orientation='h')
-            self.color_bars.append(color_bar)
-            layout_widget.addItem(color_bar, row=1, col=0)
-
-            # 将图形布局添加到网格
             self.grid_layout.addWidget(layout_widget, row, col)
+
     def update_plot(self,data_dict):
         for i, (name, addr, length, size,var) in enumerate(self.data_sheet):
-            self.plots[i].setImage(data_dict[var], autoLevels=True)  # 更新图像数据
-            max_val = np.max(data_dict[var])
-            self.plots[i].setLevels((0, max_val))  # 设置图像颜色范围
-            # 更新颜色条
-            self.color_bars[i].setLevels((0, max_val))  # 更新颜色条的范围
-            self.plots[i].setColorMap(self.color_maps[i])  # 设置颜色映射
+            if var in data_dict:
+                img = data_dict[var]
+                self.plots[i].setImage(img, autoLevels=True)  # 更新图像数据
+            else:
+                print("missing ", var)
 
 class CurveTab(QWidget):
     def __init__(self,datas=data_sheet,history_len=100):

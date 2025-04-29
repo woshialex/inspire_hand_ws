@@ -3,6 +3,8 @@
 import sys
 from inspire_sdkpy import qt_tabs,inspire_sdk,inspire_hand_defaut
 # import inspire_sdkpy
+
+
 if __name__ == "__main__":
     app = qt_tabs.QApplication(sys.argv)
     # handler=inspire_sdk.ModbusDataHandler(ip=inspire_hand_defaut.defaut_ip,LR='r',device_id=1)

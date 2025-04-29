@@ -10,7 +10,7 @@ registers = {
     1002: {"name": "REDU_RATIO", "description": "波特率设置", "length": 1},
     1032: {"name": "DEFAULT_SPEED_SET", "description": "各自由度的上电速度设置值", "length": 6},
     1044: {"name": "DEFAULT_FORCE_SET", "description": "各自由度的上电力控阈值设置值", "length": 6},
-    1700: {"name": "ip", "description": "ip part", "length": 2},
+    1700: {"name": "ip", "description": "ip part", "length": 4},
 }
 
 register_set={
@@ -124,10 +124,7 @@ class MainWindow(QMainWindow):
         self.register_inputs = {}
         for i ,(address, info) in enumerate(registers.items()):
             layout.addWidget(QLabel(info['description']))
-            if not info['name']=='ip':
-                inputs = [QLineEdit() for _ in range(info['length'])]
-            else :
-                inputs = [QLineEdit() for _ in range(info['length']*2)]
+            inputs = [QLineEdit() for _ in range(info['length'])]
 
             for input_field in inputs:
                 layout.addWidget(input_field)
@@ -171,32 +168,33 @@ class MainWindow(QMainWindow):
                     for j in range(6):
                         self.register_inputs[address][j].setText(str(values[j]))
             elif info['name']=='ip':
-                values = self.modbus.read_register(address, 2)
+                values = [self.modbus.read_register(address+i, 1)[0] for i in range(4)]
                 print(f'ip 寄存器： {values}')
-                values = self.read_and_parse_ip(values)
+                # values = self.read_and_parse_ip(values)
                 if values is not None:
                     for j in range(4):
                         self.register_inputs[address][j].setText(str(values[j]))
                         
             print(f'寄存器: {info["name"]} = {values}')
             
-    def read_and_parse_ip(self,values):
-        if values is not None and len(values) == 2:
-            byte1 = values[0] & 0xFF
-            byte2 = (values[0] >> 8) & 0xFF
-            byte3 = values[1] & 0xFF
-            byte4 = (values[1] >> 8) & 0xFF
+    # def read_and_parse_ip(self,values):
+    #     if values is not None and len(values) == 2:
+    #         byte1 = values[0] & 0xFF
+    #         byte2 = (values[0] >> 8) & 0xFF
+    #         byte3 = values[1] & 0xFF
+    #         byte4 = (values[1] >> 8) & 0xFF
             
-            ip_bytes = [byte1, byte2, byte3, byte4]
-            return ip_bytes
-        else:
-            print('读取失败或返回值不正确')
-            return None
-    def bytes_to_short(self, values):
-        # 将 4 个字节合并为 2 个短整型
-        short1 = (values[1] << 8) | values[0]  # 高字节在前，低字节在后
-        short2 = (values[3] << 8) | values[2]  # 高字节在前，低字节在后
-        return [short1, short2]
+    #         ip_bytes = [byte1, byte2, byte3, byte4]
+    #         print(ip_bytes)
+    #         return ip_bytes
+    #     else:
+    #         print('读取失败或返回值不正确')
+    #         return None
+    # def bytes_to_short(self, values):
+    #     # 将 4 个字节合并为 2 个短整型
+    #     short1 = (values[1] << 8) | values[0]  # 高字节在前，低字节在后
+    #     short2 = (values[3] << 8) | values[2]  # 高字节在前，低字节在后
+    #     return [short1, short2]
     
     def save_registers(self):
         for address, info in registers.items():
@@ -212,9 +210,11 @@ class MainWindow(QMainWindow):
                 self.modbus.write_registers(address,values)
             elif info['name']=='ip':
                 values = [int(input_field.text()) for input_field in self.register_inputs[address]]
-                values=self.bytes_to_short(values)
-                print(f'写入ip :{self.read_and_parse_ip(values)} , 寄存器 : {values}')
-                self.modbus.write_registers(address,values)
+                # values=self.bytes_to_short(values)
+                # print(f'写入ip :{self.read_and_parse_ip(values)} , 寄存器 : {values}')
+                print(f'写入ip :{values}')
+                for i in range(4):
+                    self.modbus.write_registers(address+i,values[i])
                       
 
             pass
@@ -226,5 +226,5 @@ class MainWindow(QMainWindow):
 
 if __name__ == '__main__':
     app = QApplication(sys.argv)
-    window = MainWindow(port='/dev/ttyUSB1', baudrate=115200)  # 替换为实际的串口名称
+    window = MainWindow(port='/dev/ttyUSB0', baudrate=115200)  # 替换为实际的串口名称
     sys.exit(app.exec_())

@@ -16,6 +16,8 @@ class InspireController():
         self.pub_cmd = ChannelPublisher("rt/inspire_hand/ctrl/"+LR, inspire_dds.inspire_hand_ctrl)
         self.pub_cmd.Init()
 
+        self.data_touch_lock = threading.Lock()
+        self.data_state_lock = threading.Lock()
         self.sub_states = ChannelSubscriber("rt/inspire_hand/state/"+LR, inspire_dds.inspire_hand_state)
         self.sub_states.Init(self.update_data_state, 10)
 
@@ -25,8 +27,26 @@ class InspireController():
         
         self._states={}
         self._touch={}
-        self.data_touch_lock = threading.Lock()
-        self.data_state_lock = threading.Lock()
+        self.cmd = inspire_hand_defaut.default_inspire_hand_ctrl()
+        self.get_ready(max_force=300, max_speed=500)
+
+        # self.cmd.mode
+        # mode 0：0000（无操作）
+        # mode 1：0001（角度）
+        # mode 2：0010（位置）
+        # mode 3：0011（角度 + 位置）
+        # mode 4：0100（力控）
+        # mode 5：0101（角度 + 力控）
+        # mode 6：0110（位置 + 力控）
+        # mode 7：0111（角度 + 位置 + 力控）
+        # mode 8：1000（速度）
+        # mode 9：1001（角度 + 速度）
+        # mode 10：1010（位置 + 速度）
+        # mode 11：1011（角度 + 位置 + 速度）
+        # mode 12：1100（力控 + 速度）
+        # mode 13：1101（角度 + 力控 + 速度）
+        # mode 14：1110（位置 + 力控 + 速度）
+        # mode 15：1111（角度 + 位置 + 力控 + 速度）  
 
     # 更新图形的函数
     def update_data_touch(self, msg:inspire_dds.inspire_hand_touch):
@@ -56,6 +76,35 @@ class InspireController():
     def send_cmd(self, cmd:inspire_dds.inspire_hand_ctrl):
         self.pub_cmd.Write(cmd)
 
+    def get_ready(self, max_force=100, max_speed=500):
+        self.cmd.mode = 0b1101
+        self.cmd.angle_set[:] = [1000] * 6
+        self.cmd.speed_set[:] = [max_speed] * 6
+        self.cmd.force_set[:] = [max_force] * 6 # weak force
+        self.send_cmd(self.cmd)
+
+    def open(self):
+        self.cmd.mode = 0b0001
+        self.cmd.angle_set[:] = [1000,1000,1000,1000,1000,0]
+        self.send_cmd(self.cmd)
+
+    def close(self):
+        self.cmd.mode = 0b0001
+        self.cmd.angle_set[:] = [0,0,0,0,0,0]
+        self.send_cmd(self.cmd)
+    
+    def stop(self):
+        self.cmd.mode = 0b0001
+        # self.cmd.angle_set[:] = [-1] * 6
+        self.cmd.angle_set[:] = self.state['ANGLE_ACT']
+        self.send_cmd(self.cmd)
+
+    def relax(self):
+        self.cmd.mode = 0b1101
+        # self.cmd.angle_set[:] = [-1] * 6 #can't send -1
+        self.cmd.force_set[:] = [0] * 6
+        self.send_cmd(self.cmd)
+
     @property
     def state(self):
         with self.data_state_lock:
@@ -67,64 +116,12 @@ class InspireController():
             return deepcopy(self._touch)
 
 if __name__ == '__main__':
-    cmd = inspire_hand_defaut.default_inspire_hand_ctrl()
-    controller = InspireController(LR='l')
-    short_value=1000
-
-    cmd.angle_set=[0,0,0,0,1000,1000]
-    cmd.mode=0b0001
-    controller.send_cmd(cmd)
-
-    time.sleep(1.0)
-
-    cmd.angle_set=[0,0,0,0,0,1000]
-    cmd.mode=0b0001
-    controller.send_cmd(cmd)
-
-    time.sleep(1.0)
-
-    for cnd in range(100000): 
-        # 寄存器起始地址，0x05CE 对应的是 1486
-        start_address = 1486            
-        num_registers = 6  # 6 个寄存器
-        # 生成要写入的值列表，每个寄存器为一个 short 值
-
-        if (cnd+1) % 10 == 0:
-            short_value = 1000-short_value  # 要写入的 short 值
-
-        values_to_write = [short_value] * num_registers
-        values_to_write[-1]=1000-values_to_write[-1]
-        values_to_write[-2]=1000-values_to_write[-2]
-
-        value_to_write_np=np.array(values_to_write)
-        value_to_write_np=np.clip(value_to_write_np,200,800)
-        # value_to_write_np[3]=800
-
-        # 将组合模式按二进制方式实现
-        # mode 0：0000（无操作）
-        # mode 1：0001（角度）
-        # mode 2：0010（位置）
-        # mode 3：0011（角度 + 位置）
-        # mode 4：0100（力控）
-        # mode 5：0101（角度 + 力控）
-        # mode 6：0110（位置 + 力控）
-        # mode 7：0111（角度 + 位置 + 力控）
-        # mode 8：1000（速度）
-        # mode 9：1001（角度 + 速度）
-        # mode 10：1010（位置 + 速度）
-        # mode 11：1011（角度 + 位置 + 速度）
-        # mode 12：1100（力控 + 速度）
-        # mode 13：1101（角度 + 力控 + 速度）
-        # mode 14：1110（位置 + 力控 + 速度）
-        # mode 15：1111（角度 + 位置 + 力控 + 速度）  
-        cmd.angle_set=value_to_write_np.tolist()
-        cmd.mode=0b0001
-        #Publish message
-        if  controller.send_cmd(cmd):
-            # print("Publish success. msg:", cmd.crc)
-            pass
-        else:
-            print("Waitting for subscriber.")
-
-        time.sleep(0.1)
-        
+    # cmd = inspire_hand_defaut.default_inspire_hand_ctrl()
+    controller = InspireController(LR='r')
+    controller.open()
+    time.sleep(6.0)
+    while True:
+        controller.close()
+        time.sleep(0.5)
+    # controller.relax()
+    # time.sleep(5.0)

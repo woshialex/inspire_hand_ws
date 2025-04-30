@@ -11,7 +11,7 @@ setup(name='inspire_sdkpy',
       install_requires=[
             "cyclonedds==0.10.2",
             "numpy",
-            "PyQt5",
+            #"PyQt5",
             "pyqtgraph",
             "colorcet",
             "pymodbus==3.6.9",

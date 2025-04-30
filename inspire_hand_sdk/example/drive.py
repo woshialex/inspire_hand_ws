@@ -1,7 +1,7 @@
 from asyncio import SelectorEventLoop
 import multiprocessing
 import time
-from inspire_sdkpy import qt_tabs,inspire_sdk
+from inspire_sdkpy import inspire_sdk
 import sys
 import argparse
 
@@ -17,6 +17,7 @@ def worker(config, use_serial=True, include_touch=True, gui=True):
         return
 
     if gui:
+        from inspire_sdkpy import qt_tabs
         app = qt_tabs.QApplication(sys.argv)
         window = qt_tabs.MainWindow(data_handler=handler, 
             dt=20, #50hz

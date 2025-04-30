@@ -8,7 +8,7 @@
 from .inspire_hand_defaut import *
 from . import inspire_dds
 from .inspire_sdk import ModbusDataHandler
-from .qt_tabs import ImageTab,MainWindow,CurveTab
+# from .qt_tabs import ImageTab,MainWindow,CurveTab
 
 __all__ = [
 	"inspire_dds",
